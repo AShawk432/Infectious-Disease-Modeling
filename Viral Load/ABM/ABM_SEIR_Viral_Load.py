@@ -17,7 +17,7 @@ age_groups = ['0-4', '5-14', '15-19', '20-39', '40-59', '60-69', '70-100']
 age_probs = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
 # Define death rates by age group
 # death_rates = [0.01, 0.02, 0.02, 0.05, 0.1, 0.25, 0.5]
-death_rates = [0.05, 0.05, 0.05, 0.05, 0.05, 0.05, 0.05]
+death_rates = [0.07, 0.07, 0.07, 0.07, 0.07, 0.07, 0.07]
 
 # Define the immunosenescence factor for each age group
 immunosenescence_factors = [0.95, 0.75, 0.7, 0.5, 0.3, 0.2, 0.1]
@@ -32,6 +32,9 @@ thresh1 = 0.05
 thresh2 = 0.9
 thresh3 = 0.2
 
+matrix = [0,0,0,0,1,3]
+index = np.argmax(matrix)
+print(index)
 # Define agent class
 class Agent:
     def __init__(self, state, viralload, age):
@@ -68,7 +71,7 @@ class Agent:
 
         elif self.state == 'I':
             self.days_in_compartment += 1
-            self.viralload -= random.random() / 5 * self.immunosenescence_factor
+            self.viralload -= random.random() * self.immunosenescence_factor
             self.viralload = max(self.viralload, 0)  # Prevent viral load from going below zero
             # Check if agent should die based on age and death rate
             age_group_index = None
@@ -176,6 +179,9 @@ def simulate():
             [0.3610, 0.3918, 0.3738, 0.5248, 0.5140, 0.7072, 0.1469],
             [0.1588, 0.3367, 0.3406, 0.2286, 0.3637, 0.3392, 0.3868]
         ])
+        # Normalize the social interaction matrix and compute rolling sums of the rows
+        normalized_matrix = social_interaction_matrix / np.sum(social_interaction_matrix, axis=1, keepdims=True)
+        row_sums = np.cumsum(normalized_matrix, axis=1)
 
         # social_interaction_matrix = np.array([
         #     [0.1, 0.05, 0.03, 0.01, 0.01, 0.005, 0.001],
@@ -188,22 +194,23 @@ def simulate():
         # ]
 
         # Modify the interaction loop inside the simulation
-        for _ in range(1000):
-            print("random interaction")
+        for _ in range(500):
+            # print("random interaction")
             agent1 = random.choice(agents)  # Choose a random agent
-
-            # Normalize the social interaction matrix and compute rolling sums of the rows
-            normalized_matrix = social_interaction_matrix / np.sum(social_interaction_matrix, axis=1, keepdims=True)
-            row_sums = np.cumsum(normalized_matrix, axis=1)
 
             # Choose the second agent based on age group using the rolling sums
             random_value = random.random()
-            age_group = agent1.get_age_group()  # Use get_age_group() method
-            age_group_index = age_groups.index(age_group)
+            age_group1 = agent1.get_age_group()  # Use get_age_group() method
+            age_group_index1 = age_groups.index(age_group1)
 
-            if age_group_index is not None:
-                agents_in_age_group = [agent for agent in agents if agent.get_age_group() == age_group]
-                agent2 = random.choice(agents_in_age_group)
+            # agents_in_age_group = [agent for agent in agents if agent.get_age_group() == age_group]
+            probabilities = row_sums[age_group_index1]
+            age_group_index2 = np.argmax(
+                probabilities > random_value)  # Find the first index where probability exceeds random_value
+            age_group2 = age_groups[age_group_index2]  # Get the age group based on the index
+            agents_in_age_group2 = [agent for agent in agents if agent.get_age_group() == age_group2]
+            if age_group_index2 < len(agents_in_age_group2):
+                agent2 = random.choice(agents_in_age_group2)
 
                 # Check if one agent is susceptible and the other is infected
                 if agent1.get_state() == 'S' and agent2.get_state() == 'I':
@@ -230,7 +237,7 @@ def simulate():
         avg_viral_loads = sum(agent.viralload for agent in agents if agent.get_state() != 'D') \
             / len([agent for agent in agents if agent.get_state() != 'D'])
         viral_loads.append(avg_viral_loads)
-        print(avg_viral_loads)
+        # print(avg_viral_loads)
 
         # Append viral load data for each agent at the current time step
         for i, agent in enumerate(agents):
