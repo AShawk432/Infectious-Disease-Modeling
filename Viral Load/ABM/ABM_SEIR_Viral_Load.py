@@ -32,9 +32,6 @@ thresh1 = 0.05
 thresh2 = 0.9
 thresh3 = 0.2
 
-matrix = [0,0,0,0,1,3]
-index = np.argmax(matrix)
-print(index)
 # Define agent class
 class Agent:
     def __init__(self, state, viralload, age):
