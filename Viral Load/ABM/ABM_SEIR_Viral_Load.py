@@ -365,6 +365,12 @@ for simulation in range(num_simulations):
         for age_group in viral_load_histories_by_age_group:
             viral_load_histories_by_age_group[age_group] += [0] * (
                         max_history_length - len(viral_load_histories_by_age_group[age_group]))
+    # padded_viral_load_histories = []
+    # for age_group, viral_load_history in viral_load_histories_by_age_group.items():
+    #     padding_length = max_history_length - len(viral_load_history)
+    #     padded_viral_load_history = viral_load_history + [0] * padding_length
+    #     padded_viral_load_histories.append(padded_viral_load_history)
+
 
     for age_group in age_groups:
         age_group_index = age_groups.index(age_group)
