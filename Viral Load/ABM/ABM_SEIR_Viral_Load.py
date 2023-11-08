@@ -345,6 +345,8 @@ avg_state_dynamics_by_age = {age_group: [] for age_group in age_groups}
 avg_viral_load_by_age = [[] for _ in range(len(age_groups))]
 overall_avg_loads_by_age = []
 simulation_data_by_age_group = {age_group: [] for age_group in age_groups}
+viral_load_histories_by_age_group = {age_group: [] for age_group in age_groups}
+viral_load_histories = []
 
 for simulation in range(num_simulations):
 
@@ -355,6 +357,15 @@ for simulation in range(num_simulations):
     avg_state_counts += np.array(state_counts)
     # Store the average viral loads and profiles at each time step for this simulation
     overall_avg_loads.append(avg_viral_loads)
+    for agent in agents:
+        age_group = agent.get_age_group()
+        viral_load_history = agent.viral_load_history
+        viral_load_histories_by_age_group[age_group].append(viral_load_history)
+        max_history_length = max(len(history) for history in viral_load_histories_by_age_group.values())
+        for age_group in viral_load_histories_by_age_group:
+            viral_load_histories_by_age_group[age_group] += [0] * (
+                        max_history_length - len(viral_load_histories_by_age_group[age_group]))
+
     for age_group in age_groups:
         age_group_index = age_groups.index(age_group)
         overall_avg_loads_by_age.append(avg_viral_loads_by_age)
@@ -387,6 +398,7 @@ for age_group_index, age_group in enumerate(age_groups):
 overall_avg_viral_loads = np.mean(np.array(overall_avg_loads), axis=0)
 for age_group in age_groups:
     overall_avg_viral_loads_by_age = np.mean(np.array(overall_avg_loads_by_age), axis=0)
+    avg_viral_load_profiles_by_age_group = np.mean(np.array(list(viral_load_histories_by_age_group.values())), axis=0)
 
 # Calculate the average state dynamics by age
 for age_group in age_groups:
@@ -503,27 +515,18 @@ def plotting_function():
 
     # Calculate and plot the average viral load profile for each age group
     for age_group in age_groups:
-        age_group_histories = []
-        for agent in agents:
-            if agent.get_age_group() == age_group:
-                age_group_histories.append(agent.viral_load_history)
-        if age_group_histories:
-            max_history_length = max(len(history) for history in age_group_histories)
-            age_group_histories_padded = np.array(
-                [history + [0] * (max_history_length - len(history)) for history in age_group_histories]
-            )
-            viral_load_profile_by_age_group = np.nanmean(age_group_histories_padded, axis=0)
-            plt.figure(figsize=(10, 8))
-            plt.plot(viral_load_profile_by_age_group, label=f'Age Group {age_group}', color='green')
-            plt.xlabel('Time steps')
-            plt.ylabel('Average Viral Load Profile')
-            plt.title(f'Average Viral Load Profile for Age Group {age_group}')
-            plt.legend()
-            plt.grid(True)
-            plt.savefig(os.path.join(plotting_dir, f'viral_load_profile_age_group_{age_group}.png'))
-            plt.close()
+        avg_viral_load_profile = viral_load_histories_by_age_group[age_group]
+        plt.figure(figsize=(10, 8))
+        plt.plot(avg_viral_load_profile, label=f'Age Group {age_group}', color='green')
+        plt.xlabel('Time steps')
+        plt.ylabel('Average Viral Load Profile')
+        plt.title(f'Average Viral Load Profile for Age Group {age_group}')
+        plt.legend()
+        plt.grid(True)
+        plt.savefig(os.path.join(plotting_dir, f'viral_load_profile_age_group_{age_group}.png'))
+        plt.close()
 
-            plt.plot(viral_load_profile_by_age_group, label=f'Age Group {age_group}')
+        plt.plot(avg_viral_load_profile, label=f'Age Group {age_group}')
     plt.xlabel('Time steps')
     plt.ylabel('Average Viral Load Profile')
     plt.title('Average Viral Load Profiles for All Age Groups')
