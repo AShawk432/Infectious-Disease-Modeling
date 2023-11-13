@@ -4,10 +4,11 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import os
 import csv
+import time
 
 # Define model parameters
-num_agents = 500  # Number of agents in the simulation
-num_infected = 5  # Number of initially infected agents
+num_agents = 1000  # Number of agents in the simulation
+num_infected = 20  # Number of initially infected agents
 # infection_rate = 0.005  # Probability of transmission per contact
 latent_period = 5  # Period from getting infected to becoming infectious
 infectious_period = 14  # Duration of the infectious period in time steps
@@ -31,6 +32,11 @@ viral_load_areas = []
 thresh1 = 0.05
 thresh2 = 0.9
 thresh3 = 0.2
+
+# Create primary for ABM model results
+primary_directory = "1000 Simulations ABM Model Directory"
+if not os.path.exists(primary_directory):
+    os.mkdir(primary_directory)
 
 # Define agent class
 class Agent:
@@ -123,8 +129,8 @@ class Agent:
 
 
 # Define simulation function
-def simulate():
-
+def simulate(simulation_number):
+    start_time_simulation = time.time()
     # Initialize agents
     agents = []
     people_count = [0] * len(age_groups)
@@ -206,7 +212,7 @@ def simulate():
         row_sums = np.cumsum(normalized_matrix, axis=1)
 
         # Modify the interaction loop inside the simulation
-        for _ in range(500):
+        for _ in range(1000):
             # print("random interaction")
             agent1 = random.choice(agents)  # Choose a random agent
 
@@ -268,8 +274,6 @@ def simulate():
             if agents_in_age_group:
                 avg_load_at_time_step = sum(agent.viralload for agent in agents_in_age_group) / len(agents_in_age_group)
                 # Update the maximum viral load for the age group
-                # avg_max_viral_loads_by_age[age_group_index] = max(avg_max_viral_loads_by_age[age_group_index],
-                #                                               avg_load_at_time_step)
             else:
                 avg_load_at_time_step = 0  # Handle the case where there are no agents in the age group
             avg_viral_loads_by_age[age_group_index].append(avg_load_at_time_step)
@@ -304,7 +308,7 @@ def simulate():
     #     print(f"Agent {i + 1} age: {agent.get_age()}")
 
     # Create a directory to store age group-specific data
-    viral_load_dir = "Viral_Load_Data"
+    viral_load_dir = os.path.join(primary_directory, "Viral_Load_Data")
     if not os.path.exists(viral_load_dir):
         os.mkdir(viral_load_dir)
     # Write viral load data to a file
@@ -323,8 +327,12 @@ def simulate():
             for i, agent_data in enumerate(transposed_data):
                 writer.writerow(agent_data)  # Write agent ID and viral load data
 
-    return state_counts, agents, avg_viral_loads, state_dynamics_by_age, avg_viral_loads_by_age, viral_load_data_by_age, \
+    print(f"Simulation {simulation_number} completed.")
+    end_time_simulation = time.time()  # Record the end time of the simulation
+    total_time = end_time_simulation - start_time_simulation  # Calculate the total time taken
+    print(f"Time taken for simulation {simulation_number}: {total_time} seconds")
 
+    return state_counts, agents, avg_viral_loads, state_dynamics_by_age, avg_viral_loads_by_age, viral_load_data_by_age, \
 
 
 # # Run simulation
@@ -337,41 +345,31 @@ def simulate():
 # r_counts = state_counts[:, 3]
 # d_counts = state_counts[:, 4]
 
-# Run simulation 100 times and accumulate results
-num_simulations = 2
+start_time_script = time.time()
+
+# Run simulation n times and accumulate results
+num_simulations = 1000
 avg_state_counts = np.zeros((time_steps, 5))  # Initialize an array to accumulate state counts
 overall_avg_loads = []
 avg_state_dynamics_by_age = {age_group: [] for age_group in age_groups}
 avg_viral_load_by_age = [[] for _ in range(len(age_groups))]
 overall_avg_loads_by_age = []
+viral_load_histories_by_age = [[] for _ in range(len(age_groups))]
 simulation_data_by_age_group = {age_group: [] for age_group in age_groups}
-viral_load_histories_by_age_group = {age_group: [] for age_group in age_groups}
-viral_load_histories = []
 
 for simulation in range(num_simulations):
 
     # print(avg_viral_loads)
     state_counts, agents, avg_viral_loads, state_dynamics_by_age, avg_viral_loads_by_age, viral_load_data_by_age, \
-         = simulate()
+        = simulate(simulation)
+
+    for agent in agents:
+        age_group_index = age_groups.index(agent.get_age_group())
+        viral_load_histories_by_age[age_group_index].append(agent.viral_load_history)
 
     avg_state_counts += np.array(state_counts)
     # Store the average viral loads and profiles at each time step for this simulation
     overall_avg_loads.append(avg_viral_loads)
-    for agent in agents:
-        age_group = agent.get_age_group()
-        viral_load_history = agent.viral_load_history
-        viral_load_histories_by_age_group[age_group].append(viral_load_history)
-        max_history_length = max(len(history) for history in viral_load_histories_by_age_group.values())
-        for age_group in viral_load_histories_by_age_group:
-            viral_load_histories_by_age_group[age_group] += [0] * (
-                        max_history_length - len(viral_load_histories_by_age_group[age_group]))
-    # padded_viral_load_histories = []
-    # for age_group, viral_load_history in viral_load_histories_by_age_group.items():
-    #     padding_length = max_history_length - len(viral_load_history)
-    #     padded_viral_load_history = viral_load_history + [0] * padding_length
-    #     padded_viral_load_histories.append(padded_viral_load_history)
-
-
     for age_group in age_groups:
         age_group_index = age_groups.index(age_group)
         overall_avg_loads_by_age.append(avg_viral_loads_by_age)
@@ -382,7 +380,7 @@ for simulation in range(num_simulations):
         avg_state_dynamics_by_age[age_group].append(np.array(state_dynamics_by_age[age_group]))
 
 # Create a directory to store age group-specific data
-viral_load_data_dir = "Simulation_stat_analysis_data"
+viral_load_data_dir = os.path.join(primary_directory, "Simulation_stat_analysis_data")
 if not os.path.exists(viral_load_data_dir):
     os.mkdir(viral_load_data_dir)
 # Save the overall average viral load data to a CSV file in the same directory as age group data
@@ -393,9 +391,9 @@ with open(overall_avg_file_path, 'w', newline='') as overall_file:
 # Write the data for each age group to separate CSV files
 for age_group_index, age_group in enumerate(age_groups):
     age_group_file_path = os.path.join(viral_load_data_dir, f'overall_viral_load_age_{age_group}.csv')
-    age_group_data = np.array(simulation_data_by_age_group[age_group])
+    age_group_data = np.array(simulation_data_by_age_group[age_group], dtype=float)
     with open(age_group_file_path, 'w', newline='') as age_file:
-        writer = csv.writer(age_file)
+        writer = csv.writer(age_file, delimiter=',')
         # header_row = [str(i) for i in range(age_group_data.shape[1])]
         # writer.writerow(header_row)
         writer.writerows(age_group_data)
@@ -404,11 +402,24 @@ for age_group_index, age_group in enumerate(age_groups):
 overall_avg_viral_loads = np.mean(np.array(overall_avg_loads), axis=0)
 for age_group in age_groups:
     overall_avg_viral_loads_by_age = np.mean(np.array(overall_avg_loads_by_age), axis=0)
-    avg_viral_load_profiles_by_age_group = np.mean(np.array(list(viral_load_histories_by_age_group.values())), axis=0)
 
 # Calculate the average state dynamics by age
 for age_group in age_groups:
     avg_state_dynamics_by_age[age_group] = np.mean(np.array(avg_state_dynamics_by_age[age_group]), axis=0)
+
+avg_viral_load_profiles_by_age = []
+for age_group_histories in viral_load_histories_by_age:
+    max_history_length = max(len(history) for history in age_group_histories)
+    age_group_histories_padded = np.array(
+        [history + [0] * (max_history_length - len(history)) for history in age_group_histories]
+    )
+    avg_viral_load_profile_by_age_group = np.nanmean(age_group_histories_padded, axis=0)
+    avg_viral_load_profiles_by_age.append(avg_viral_load_profile_by_age_group)
+
+# Calculate the total time taken for the entire script
+end_time_script = time.time()
+total_time_script = end_time_script - start_time_script
+print(f"Total time taken for the entire script: {total_time_script} seconds")
 
 # Extract individual state counts for plotting
 s_counts = avg_state_counts[:, 0]
@@ -419,6 +430,11 @@ d_counts = avg_state_counts[:, 4]
 
 
 def plotting_function():
+
+    # Create a directory to store age group state dynamics plots
+    plotting_dir = os.path.join(primary_directory, "ABM_VL_Plotting")
+    if not os.path.exists(plotting_dir):
+        os.mkdir(plotting_dir)
 
     # Plot SEIR dynamics for each state of agents over time
     plt.figure(figsize=(10, 8))
@@ -432,6 +448,7 @@ def plotting_function():
     plt.title('Agent-based SEIRD model simulation')
     plt.legend()
     plt.grid(True)
+    plt.savefig(os.path.join(plotting_dir, f'SEIR population state dynamics'))
     plt.show()
 
     # Collect time total steps in a vector
@@ -461,12 +478,8 @@ def plotting_function():
     plt.yticks(rotation=45)
     plt.legend()
     plt.grid(True)
+    plt.savefig(os.path.join(plotting_dir, f'Average Viral Load Over Time (Averaged Across Simulations)'))
     plt.show()
-
-    # Create a directory to store age group state dynamics plots
-    plotting_dir = "ABM_VL_Plotting"
-    if not os.path.exists(plotting_dir):
-        os.mkdir(plotting_dir)
 
     # Plot state dynamics for each age group and save to the folder
     for age_group in age_groups:
@@ -488,8 +501,6 @@ def plotting_function():
         plt.title(f'State Dynamics for Age Group {age_group}')
         plt.legend()
         plt.grid(True)
-
-        # Save the state dynamics plots for each age group into the folder
         plt.savefig(os.path.join(plotting_dir, f'age_group_{age_group}_step_{time_steps}.png'))
         plt.close()
 
@@ -517,13 +528,12 @@ def plotting_function():
     plt.yticks(rotation=45)
     plt.legend()
     plt.grid(True)
+    plt.savefig(os.path.join(plotting_dir, f'Average Viral Load Over Time by Age Group.png'))
     plt.show()
 
-    # Calculate and plot the average viral load profile for each age group
-    for age_group in age_groups:
-        avg_viral_load_profile = viral_load_histories_by_age_group[age_group]
-        plt.figure(figsize=(10, 8))
-        plt.plot(avg_viral_load_profile, label=f'Age Group {age_group}', color='green')
+    plt.figure(figsize=(10, 8))
+    for age_group_index, age_group in enumerate(age_groups):
+        plt.plot(avg_viral_load_profiles_by_age[age_group_index], label=f'Age Group {age_group}', alpha=0.7)
         plt.xlabel('Time steps')
         plt.ylabel('Average Viral Load Profile')
         plt.title(f'Average Viral Load Profile for Age Group {age_group}')
@@ -532,7 +542,8 @@ def plotting_function():
         plt.savefig(os.path.join(plotting_dir, f'viral_load_profile_age_group_{age_group}.png'))
         plt.close()
 
-        plt.plot(avg_viral_load_profile, label=f'Age Group {age_group}')
+    for age_group_index, age_group in enumerate(age_groups):
+        plt.plot(avg_viral_load_profiles_by_age[age_group_index], label=f'Age Group {age_group}', alpha=0.7)
     plt.xlabel('Time steps')
     plt.ylabel('Average Viral Load Profile')
     plt.title('Average Viral Load Profiles for All Age Groups')
