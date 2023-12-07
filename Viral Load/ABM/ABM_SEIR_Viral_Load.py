@@ -8,6 +8,7 @@ import time
 
 # Define model parameters
 num_agents = 1000  # Number of agents in the simulation
+num_exposed = 60  # Number of initially exposed agents
 num_infected = 20  # Number of initially infected agents
 # infection_rate = 0.005  # Probability of transmission per contact
 latent_period = 5  # Period from getting infected to becoming infectious
@@ -34,7 +35,7 @@ thresh2 = 0.9
 thresh3 = 0.2
 
 # Create primary for ABM model results
-primary_directory = "1000 Simulations ABM Model Directory"
+primary_directory = "Primary ABM Model Directory"
 if not os.path.exists(primary_directory):
     os.mkdir(primary_directory)
 
@@ -103,7 +104,8 @@ class Agent:
              self.viralload = 0
         elif self.state == 'R':
             self.days_in_compartment += 1
-            self.viralload -= self.viralload
+            self.viralload -= (random.random() * self.immunosenescence_factor)/3
+            self.viralload = max(self.viralload, 0)
             # # ## Adds reinfectivity
             # if self.immune_days >= immune_period:  # Check if the agent's immunity period is over
             #     self.state = 'S'
@@ -144,7 +146,12 @@ def simulate(simulation_number):
     for i in range(num_agents):
         if i < num_infected:
             state = 'I'
-            viralload = (thresh2 + thresh3) / 2
+            # viralload = (thresh2 + thresh3) / 2
+            viralload = thresh2 + (random.random() - 0.5) * (thresh3 - thresh2)
+        elif i < num_infected + num_exposed:
+            state = 'E'
+            # viralload = (thresh1 + thresh3) / 2
+            viralload = thresh1 + (random.random() - 0.5) * (thresh2 - thresh1)
         else:
             state = 'S'
             viralload = 0
@@ -348,7 +355,7 @@ def simulate(simulation_number):
 start_time_script = time.time()
 
 # Run simulation n times and accumulate results
-num_simulations = 1000
+num_simulations = 1
 avg_state_counts = np.zeros((time_steps, 5))  # Initialize an array to accumulate state counts
 overall_avg_loads = []
 avg_state_dynamics_by_age = {age_group: [] for age_group in age_groups}
@@ -550,6 +557,18 @@ def plotting_function():
     plt.legend()
     plt.grid(True)
     plt.savefig(os.path.join(plotting_dir, f'Average Viral Load Profiles for All Age Groups.png'))
+    plt.close()
 
+    # Plot the ratio of infected over exposed
+    plt.figure(figsize=(10, 8))
+    infected_over_exposed_ratio = np.array(i_counts) / np.array(e_counts)
+    plt.plot(infected_over_exposed_ratio, label='Infected over Exposed Ratio', color='green')
+    plt.xlabel('Time steps')
+    plt.ylabel('Ratio')
+    plt.title('Infected over Exposed Ratio Over Time')
+    plt.legend()
+    plt.grid(True)
+    plt.savefig(os.path.join(plotting_dir, 'Infected_over_Exposed_Ratio.png'))
+    plt.show()
 
 plotting_function()
