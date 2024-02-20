@@ -7,9 +7,10 @@ import csv
 import time
 
 # Define model parameters
-num_agents = 1000  # Number of agents in the simulation
-num_exposed = 60  # Number of initially exposed agents
+num_agents = 500  # Number of agents in the simulation
+num_exposed = 20  # Number of initially exposed agents
 num_infected = 20  # Number of initially infected agents
+num_recovered = 10 # Number of initially recovered agents
 # infection_rate = 0.005  # Probability of transmission per contact
 latent_period = 5  # Period from getting infected to becoming infectious
 infectious_period = 14  # Duration of the infectious period in time steps
@@ -144,14 +145,17 @@ def simulate(simulation_number):
     # Initialize a list to store viral load data for each agent at each time step
     viral_load_data_by_agent = []
     for i in range(num_agents):
-        if i < num_infected:
+        if i < num_recovered:
+            state = 'R'
+            viralload =0
+        elif i < num_infected:
             state = 'I'
-            # viralload = (thresh2 + thresh3) / 2
-            viralload = thresh2 + (random.random() - 0.5) * (thresh3 - thresh2)
+            viralload = (thresh2 + thresh3) / 2
+            # viralload = thresh2 + (random.random() - 0.5) * (thresh3 - thresh2)
         elif i < num_infected + num_exposed:
             state = 'E'
-            # viralload = (thresh1 + thresh3) / 2
-            viralload = thresh1 + (random.random() - 0.5) * (thresh2 - thresh1)
+            viralload = (thresh1 + thresh2) / 2
+            # viralload = thresh1 + (random.random() - 0.5) * (thresh2 - thresh1)
         else:
             state = 'S'
             viralload = 0
@@ -171,6 +175,7 @@ def simulate(simulation_number):
 
     # Run simulation
     state_counts = []
+    state_counts.append([num_agents-(num_infected+num_exposed), num_exposed, num_infected, 0, 0])
     state_dynamics_by_age = {age_group: [] for age_group in age_groups}  # Dictionary of state dynamics in each age group
     viral_load_data = [[] for _ in range(num_agents)]
     # Create lists to store viral load data for each age group
@@ -219,7 +224,7 @@ def simulate(simulation_number):
         row_sums = np.cumsum(normalized_matrix, axis=1)
 
         # Modify the interaction loop inside the simulation
-        for _ in range(1000):
+        for _ in range(500):
             # print("random interaction")
             agent1 = random.choice(agents)  # Choose a random agent
 
@@ -314,25 +319,20 @@ def simulate(simulation_number):
     # for i, agent in enumerate(agents):
     #     print(f"Agent {i + 1} age: {agent.get_age()}")
 
-    # Create a directory to store age group-specific data
-    viral_load_dir = os.path.join(primary_directory, "Viral_Load_Data")
-    if not os.path.exists(viral_load_dir):
-        os.mkdir(viral_load_dir)
-    # Write viral load data to a file
-    with open(os.path.join(viral_load_dir, 'viral_load.csv'), 'w') as file:
-        for agent_loads in viral_load_data:
-            file.write(','.join(str(load) for load in agent_loads) + '\n')
-
-    # Modify the code to create separate CSV files for each age group
-    for age_group_index, age_group in enumerate(age_groups):
-        age_group_file_path = os.path.join(viral_load_dir, f'viral_load_age_{age_group}.csv')
-        age_group_data = viral_load_data_by_age_and_time[age_group_index]
-        # Transpose the data for this age group
-        transposed_data = list(map(list, zip(*age_group_data)))
-        with open(age_group_file_path, 'w', newline='') as file:
-            writer = csv.writer(file)
-            for i, agent_data in enumerate(transposed_data):
-                writer.writerow(agent_data)  # Write agent ID and viral load data
+    # # Create a directory to store viral load data
+    # viral_load_dir = os.path.join(primary_directory, "Viral_Load_Data")
+    # if not os.path.exists(viral_load_dir):
+    #     os.mkdir(viral_load_dir)
+    # # Create separate CSV files for each age group viral load data
+    # for age_group_index, age_group in enumerate(age_groups):
+    #     age_group_file_path = os.path.join(viral_load_dir, f'viral_load_age_{age_group}.csv')
+    #     age_group_data = viral_load_data_by_age_and_time[age_group_index]
+    #     # Transpose the data for this age group
+    #     transposed_data = list(map(list, zip(*age_group_data)))
+    #     with open(age_group_file_path, 'w', newline='') as file:
+    #         writer = csv.writer(file)
+    #         for i, agent_data in enumerate(transposed_data):
+    #             writer.writerow(agent_data)  # Write agent ID and viral load data
 
     print(f"Simulation {simulation_number} completed.")
     end_time_simulation = time.time()  # Record the end time of the simulation
@@ -340,7 +340,7 @@ def simulate(simulation_number):
     print(f"Time taken for simulation {simulation_number}: {total_time} seconds")
 
     return state_counts, agents, avg_viral_loads, state_dynamics_by_age, avg_viral_loads_by_age, viral_load_data_by_age, \
-
+            viral_load_data, viral_load_data_by_age_and_time
 
 # # Run simulation
 # state_counts, agents, avg_viral_loads, viral_load_data_by_agent = simulate()
@@ -355,20 +355,25 @@ def simulate(simulation_number):
 start_time_script = time.time()
 
 # Run simulation n times and accumulate results
-num_simulations = 1
-avg_state_counts = np.zeros((time_steps, 5))  # Initialize an array to accumulate state counts
+num_simulations = 2
+avg_state_counts = np.zeros((time_steps+1, 5))  # Initialize an array to accumulate state counts
 overall_avg_loads = []
 avg_state_dynamics_by_age = {age_group: [] for age_group in age_groups}
 avg_viral_load_by_age = [[] for _ in range(len(age_groups))]
 overall_avg_loads_by_age = []
 viral_load_histories_by_age = [[] for _ in range(len(age_groups))]
 simulation_data_by_age_group = {age_group: [] for age_group in age_groups}
+all_viral_load_data = []
+all_age_viral_load_data = [[] for _ in age_groups]
 
 for simulation in range(num_simulations):
 
     # print(avg_viral_loads)
     state_counts, agents, avg_viral_loads, state_dynamics_by_age, avg_viral_loads_by_age, viral_load_data_by_age, \
-        = simulate(simulation)
+       viral_load_data, viral_load_data_by_age_and_time = simulate(simulation)
+
+    # Append viral load data for this simulation to the list
+    all_viral_load_data.append(viral_load_data)
 
     for agent in agents:
         age_group_index = age_groups.index(agent.get_age_group())
@@ -381,16 +386,48 @@ for simulation in range(num_simulations):
         age_group_index = age_groups.index(age_group)
         overall_avg_loads_by_age.append(avg_viral_loads_by_age)
         simulation_data_by_age_group[age_group].append(avg_viral_loads_by_age[age_group_index])
-
-    # Accumulate state dynamics by age
-    for age_group in age_groups:
         avg_state_dynamics_by_age[age_group].append(np.array(state_dynamics_by_age[age_group]))
+
+    for age_group_index, age_group in enumerate(age_groups):
+        for time_index, viral_load_data in enumerate(viral_load_data_by_age_and_time[age_group_index]):
+            all_age_viral_load_data[age_group_index].append(viral_load_data)
+
+# Calculate the average viral load data over all simulations
+overall_viral_load_data = np.mean(all_viral_load_data, axis=0)
+# all_age_viral_load_data = np.mean(all_age_viral_load_data, axis=0)
+
+# Create a directory to store averaged viral load data
+ovrall_viral_load_dir = os.path.join(primary_directory, "Viral_Load_Data")
+if not os.path.exists(ovrall_viral_load_dir):
+    os.mkdir(ovrall_viral_load_dir)
+# Save the overall viral load data to a CSV file
+ovrall_viral_load_file_path = os.path.join(ovrall_viral_load_dir, 'overall_viral_load.csv')
+with open(ovrall_viral_load_file_path, 'w', newline='') as file:
+    writer = csv.writer(file)
+    for agent_loads in overall_viral_load_data:
+        writer.writerow(agent_loads)
+
+# # Save the overall viral load data to separate CSV files for each age group
+# for age_group_index, age_group in enumerate(age_groups):
+#     max_len = max(len(seq) for seq in all_age_viral_load_data[age_group_index])
+#     padded_data = np.array(
+#         [np.pad(seq, (0, max_len - len(seq)), 'constant') for seq in all_age_viral_load_data[age_group_index]])
+#     overall_viral_load_data_by_age_and_time = np.mean(np.array(padded_data), axis=0)
+#     overall_viral_load_data_by_age_and_time = [overall_viral_load_data_by_age_and_time]
+#     age_group_file_path = os.path.join(ovrall_viral_load_dir, f'overall_viral_load_age_{age_group}.csv')
+#     # Transpose the data for this age group
+#     transposed_data = list(map(list, zip(*overall_viral_load_data_by_age_and_time)))
+#     with open(age_group_file_path, 'w', newline='') as file:
+#         writer = csv.writer(file)
+#         for i, agent_data in enumerate(transposed_data):
+#             writer.writerow(agent_data)
+
 
 # Create a directory to store age group-specific data
 viral_load_data_dir = os.path.join(primary_directory, "Simulation_stat_analysis_data")
 if not os.path.exists(viral_load_data_dir):
     os.mkdir(viral_load_data_dir)
-# Save the overall average viral load data to a CSV file in the same directory as age group data
+# Overall average viral load data to a CSV file in the same directory as age group data
 overall_avg_file_path = os.path.join(viral_load_data_dir, "overall_avg_viral_load.csv")
 with open(overall_avg_file_path, 'w', newline='') as overall_file:
     writer = csv.writer(overall_file)
@@ -428,6 +465,7 @@ end_time_script = time.time()
 total_time_script = end_time_script - start_time_script
 print(f"Total time taken for the entire script: {total_time_script} seconds")
 
+avg_state_counts = avg_state_counts/num_simulations
 # Extract individual state counts for plotting
 s_counts = avg_state_counts[:, 0]
 e_counts = avg_state_counts[:, 1]
@@ -444,6 +482,8 @@ def plotting_function():
         os.mkdir(plotting_dir)
 
     # Plot SEIR dynamics for each state of agents over time
+    print(e_counts[0])
+    print(i_counts[0])
     plt.figure(figsize=(10, 8))
     plt.plot(s_counts, label='Susceptible')
     plt.plot(e_counts, label='Exposed')
