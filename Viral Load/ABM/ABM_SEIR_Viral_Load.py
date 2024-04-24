@@ -434,7 +434,7 @@ with open(overall_avg_file_path, 'w', newline='') as overall_file:
     writer.writerows(overall_avg_loads)
 # Write the data for each age group to separate CSV files
 for age_group_index, age_group in enumerate(age_groups):
-    age_group_file_path = os.path.join(viral_load_data_dir, f'overall_viral_load_age_{age_group}.csv')
+    age_group_file_path = os.path.join(viral_load_data_dir, f'overall_avg_viral_load_age_{age_group}.csv')
     age_group_data = np.array(simulation_data_by_age_group[age_group], dtype=float)
     with open(age_group_file_path, 'w', newline='') as age_file:
         writer = csv.writer(age_file, delimiter=',')
@@ -459,6 +459,7 @@ for age_group_histories in viral_load_histories_by_age:
     )
     avg_viral_load_profile_by_age_group = np.nanmean(age_group_histories_padded, axis=0)
     avg_viral_load_profiles_by_age.append(avg_viral_load_profile_by_age_group)
+
 
 # Calculate the total time taken for the entire script
 end_time_script = time.time()
@@ -495,7 +496,7 @@ def plotting_function():
     plt.title('Agent-based SEIRD model simulation')
     plt.legend()
     plt.grid(True)
-    plt.savefig(os.path.join(plotting_dir, f'SEIR population state dynamics'))
+    plt.savefig(os.path.join(plotting_dir, f'SEIR population state dynamics.eps'), format='eps')
     plt.show()
 
     # Collect time total steps in a vector
@@ -525,7 +526,7 @@ def plotting_function():
     plt.yticks(rotation=45)
     plt.legend()
     plt.grid(True)
-    plt.savefig(os.path.join(plotting_dir, f'Average Viral Load Over Time (Averaged Across Simulations)'))
+    plt.savefig(os.path.join(plotting_dir, f'Average Viral Load Over Time (Averaged Across Simulations.eps'),format='eps')
     plt.show()
 
     # Plot state dynamics for each age group and save to the folder
@@ -548,7 +549,7 @@ def plotting_function():
         plt.title(f'State Dynamics for Age Group {age_group}')
         plt.legend()
         plt.grid(True)
-        plt.savefig(os.path.join(plotting_dir, f'age_group_{age_group}_step_{time_steps}.png'))
+        plt.savefig(os.path.join(plotting_dir, f'age_group_{age_group}_step_{time_steps}.eps'),format='eps')
         plt.close()
 
     for age_group_index, age_group in enumerate(age_groups):
@@ -559,7 +560,7 @@ def plotting_function():
         plt.title(f'Average Viral Load for Age Group {age_group} Over Time')
         plt.legend()
         plt.grid(True)
-        avg_viral_loads_filename = f'average_viral_loads_age_group_{age_group}.png'
+        avg_viral_loads_filename = f'average_viral_loads_age_group_{age_group}.eps'
         avg_viral_loads_filepath = os.path.join(plotting_dir, avg_viral_loads_filename)
         plt.savefig(avg_viral_loads_filepath)
         plt.close()
@@ -575,7 +576,7 @@ def plotting_function():
     plt.yticks(rotation=45)
     plt.legend()
     plt.grid(True)
-    plt.savefig(os.path.join(plotting_dir, f'Average Viral Load Over Time by Age Group.png'))
+    plt.savefig(os.path.join(plotting_dir, f'Average Viral Load Over Time by Age Group.eps'),format='eps')
     plt.show()
 
     plt.figure(figsize=(10, 8))
@@ -586,7 +587,7 @@ def plotting_function():
         plt.title(f'Average Viral Load Profile for Age Group {age_group}')
         plt.legend()
         plt.grid(True)
-        plt.savefig(os.path.join(plotting_dir, f'viral_load_profile_age_group_{age_group}.png'))
+        plt.savefig(os.path.join(plotting_dir, f'viral_load_profile_age_group_{age_group}.eps'),format='eps')
         plt.close()
 
     for age_group_index, age_group in enumerate(age_groups):
@@ -596,7 +597,7 @@ def plotting_function():
     plt.title('Average Viral Load Profiles for All Age Groups')
     plt.legend()
     plt.grid(True)
-    plt.savefig(os.path.join(plotting_dir, f'Average Viral Load Profiles for All Age Groups.png'))
+    plt.savefig(os.path.join(plotting_dir, f'Average Viral Load Profiles for All Age Groups.eps'),format='eps')
     plt.close()
 
     # Plot the ratio of infected over exposed
@@ -608,7 +609,7 @@ def plotting_function():
     plt.title('Infected over Exposed Ratio Over Time')
     plt.legend()
     plt.grid(True)
-    plt.savefig(os.path.join(plotting_dir, 'Infected_over_Exposed_Ratio.png'))
+    plt.savefig(os.path.join(plotting_dir, 'Infected_over_Exposed_Ratio.eps'),format='eps')
     plt.show()
 
 plotting_function()
